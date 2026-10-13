@@ -62,9 +62,10 @@ NimbusAI đang trả mức giá cao cấp của GPU thế hệ mới ($2.50/gi�
 ### Extension 3: `cache_is_worth_it()` — Prompt Caching
 * **Vị trí cài đặt:** Hàm `cache_is_worth_it()` và `cache_break_even_reads()` trong [finops/pricing.py](K4-L3-DAY25-HoangNgocDangKhoa-2A202602790-GpuFinOps/finops/pricing.py), gọi thực thi trong [missions/m2_inference_levers.py](K4-L3-DAY25-HoangNgocDangKhoa-2A202602790-GpuFinOps/missions/m2_inference_levers.py).
 * **Nguyên lý hòa vốn (Break-even):** Ghi cache phát sinh chi phí lưu trữ/surcharge. Tiền tiết kiệm từ các lượt đọc lặp lại phải bù đắp được chi phí ghi:
-  $$\text{Break-even reads} = \frac{\text{Write Cost per 1M}}{P_{\text{base}} \times (1 - \text{read\_discount})}$$
+  $$\text{Break-even reads} = \frac{\text{Write Cost per 1M}}{P_{\text{base}} \times (1 - \text{read discount})}$$
   Với mô hình Anthropic Prompt Caching (write cost = 1.25x base price, read discount = 0.10 tức giảm 90%):
-  $$\text{Ngưỡng hòa vốn} = \frac{1.25 \times P_{\text{in}}}{0.90 \times P_{\text{in}}} \approx \mathbf{1.39 \text{ lần đọc}}$$
+  $$\text{Break-even} = \frac{1.25 \times P_{\text{in}}}{0.90 \times P_{\text{in}}} = \frac{1.25}{0.90} \approx 1.39 \text{ reads}$$
+  *(Ngưỡng hòa vốn đạt được khi prefix được tái sử dụng từ 1.39 lần đọc trở lên).*
 * **Kết quả đo lường thực nghiệm:**
   - **Kịch bản tái sử dụng cao (High-reuse — giả định 5.0 lần đọc/prefix như Chat/RAG):** `cache_is_worth_it = True`. Chi phí serving đạt **$1.126/1M-token** (chưa tính ghi) và **$1.170/1M-token** (đã tính khấu hao chi phí ghi cache).
   - **Kịch bản tái sử dụng thấp (Low-reuse — giả định 1.0 lần đọc/prefix):** `cache_is_worth_it = False`. Hệ thống tự động bypass caching vì áp dụng cache sẽ làm đội chi phí lên cao hơn đọc bình thường ($1.282/1M-token).

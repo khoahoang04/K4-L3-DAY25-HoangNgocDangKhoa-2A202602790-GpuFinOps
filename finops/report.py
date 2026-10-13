@@ -67,7 +67,7 @@ def build_report(
         "### Extension 3: cache_is_worth_it() — Kinh tế học Prompt Caching",
         "- **Nguyên lý hòa vốn (Break-even):** Prompt caching chỉ thực sự tiết kiệm khi tổng chi phí đọc được giảm trừ lớn hơn chi phí lưu trữ/ghi ban đầu.",
         "  - Giả định chi phí ghi = 1.25x giá input cơ sở; Chiết khấu đọc = 90% (theo mô hình định giá Anthropic Prompt Caching).",
-        "  - **Ngưỡng hòa vốn (Break-even threshold):** $1.25 / (1.0 - 0.10) = \\mathbf{1.39 \\text{ lần đọc}}$.",
+        "  - **Ngưỡng hòa vốn (Break-even threshold):** $1.25 / (1.0 - 0.10) \\approx 1.39$ lần đọc.",
         "- **Đo lường thực nghiệm:**",
         "  - *Kịch bản tái sử dụng cao (Chat/RAG, giả định 5.0 lần đọc/prefix):* `cache_is_worth_it = True`. Chi phí serving đạt **$1.126/1M-token** (chưa tính ghi) và **$1.170/1M-token** (đã tính khấu hao phí ghi cache 1.25x).",
         "  - *Kịch bản tái sử dụng thấp (giả định 1.0 lần đọc/prefix):* `cache_is_worth_it = False`. Hệ thống tự động bỏ qua caching để tránh lãng phí chi phí ghi/lưu trữ ($1.282/1M-token).",
