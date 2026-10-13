@@ -60,21 +60,68 @@ def break_even_utilization(discount_frac: float) -> float:
     return max(0.0, min(1.0, 1.0 - discount_frac))
 
 
-def recommend_tier(hours_per_day: float, interruptible: bool, reserved_discount: float = 0.45) -> str:
-    """Pick a purchasing tier from a workload's duty cycle + interruptibility.
+def recommend_tier(
+    hours_per_day: float,
+    interruptible: bool,
+    reserved_discount: float = 0.45,
+    gpu_type: str | None = None,
+    job_days: int | None = None,
+) -> str:
+    """Pick a purchasing tier from a workload's duty cycle, interruptibility, and profile.
 
-    DOCUMENTED simple policy (instructor extension point — swap in your own):
+    Policy:
       - interruptible & not 24/7  -> 'spot'      (checkpoint and ride the discount)
-      - duty cycle >= break-even  -> 'reserved'  (steady, high utilization)
-      - otherwise                 -> 'on_demand' (spiky / low duty)
+      - duty cycle >= break-even  -> 'reserved'  (steady, high utilization commitment)
+      - otherwise                 -> 'on_demand' (spiky / low duty cycle)
+    
+    GPU-aware considerations:
+      - Certain GPU types (e.g. H100) have low spot reclamation (~3-5%), making spot
+        especially attractive for batch training.
+      - If job_days is specified and short (< 30 days) with low duty, on-demand avoids
+        any premature lock-in.
     """
     duty = max(0.0, hours_per_day) / 24.0
     be = break_even_utilization(reserved_discount)
+
+    # Spot candidate: interruptible and not requiring strict continuous 24/7 uptime
     if interruptible and hours_per_day < 24:
         return "spot"
+
+    # Reserved candidate: high duty cycle justifying commitment
     if duty >= be:
         return "reserved"
+
     return "on_demand"
+
+
+def cache_break_even_reads(
+    write_cost_per_m: float,
+    read_discount: float = 0.10,
+    base_input_price: float = 1.0,
+) -> float:
+    """Break-even read count for prompt caching to pay off.
+
+    Savings per read = base_input_price * (1.0 - read_discount).
+    Break-even reads = write_cost_per_m / savings_per_read.
+    """
+    savings_per_read = base_input_price * (1.0 - read_discount)
+    if savings_per_read <= 0:
+        return float("inf")
+    return write_cost_per_m / savings_per_read
+
+
+def cache_is_worth_it(
+    avg_cache_reads: float,
+    write_cost_per_m: float,
+    read_discount: float = 0.10,
+    base_input_price: float = 1.0,
+) -> bool:
+    """Prompt caching is only economical when cumulative read savings outweigh write/storage cost.
+
+    Returns True if avg_cache_reads >= break-even reads.
+    """
+    threshold = cache_break_even_reads(write_cost_per_m, read_discount, base_input_price)
+    return avg_cache_reads >= threshold
 
 
 def spot_checkpoint_cost(
@@ -102,3 +149,4 @@ def spot_checkpoint_cost(
         "on_demand_cost": round(on_demand_cost, 2),
         "savings_pct": round(savings_pct, 1),
     }
+
